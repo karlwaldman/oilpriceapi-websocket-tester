@@ -1,10 +1,14 @@
 {
   "name": "oilpriceapi-websocket-tester",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Test your WebSocket connection to OilPriceAPI's real-time energy price feed",
   "main": "cli/index.js",
+  "bin": {
+    "oilpriceapi-ws-test": "./cli/index.js"
+  },
   "scripts": {
-    "test": "node cli/index.js"
+    "start": "node cli/index.js",
+    "test": "echo \"Run: node cli/index.js YOUR_API_KEY\" && exit 0"
   },
   "keywords": [
     "oilpriceapi",
