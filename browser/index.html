@@ -1,0 +1,191 @@
+<!doctype html>
+<html>
+  <head>
+    <title>OilPriceAPI WebSocket Tester</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      h1 {
+        color: #1a1a2e;
+      }
+      .controls {
+        margin: 20px 0;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      input {
+        width: 300px;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border: none;
+        border-radius: 4px;
+        background: #16213e;
+        color: white;
+      }
+      button:hover {
+        background: #0f3460;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      #status {
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .connected {
+        background: #d4edda;
+        color: #155724;
+      }
+      .disconnected {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      #log {
+        background: #1a1a2e;
+        color: #0f0;
+        padding: 20px;
+        height: 400px;
+        overflow-y: auto;
+        font-family: "Courier New", monospace;
+        border-radius: 8px;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .error {
+        color: #ff6b6b;
+      }
+      .info {
+        color: #6bcfff;
+      }
+      .price {
+        color: #90ee90;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>OilPriceAPI WebSocket Tester</h1>
+    <p>
+      Enter your API key to test the real-time price feed. Get your key at
+      <a href="https://oilpriceapi.com/api-keys">oilpriceapi.com/api-keys</a>
+    </p>
+
+    <div class="controls">
+      <input type="password" id="apiKey" placeholder="Your API Key" />
+      <button id="connectBtn" onclick="connect()">Connect</button>
+      <button id="disconnectBtn" onclick="disconnect()" disabled>
+        Disconnect
+      </button>
+      <span id="status" class="disconnected">Disconnected</span>
+    </div>
+
+    <div id="log"></div>
+
+    <script>
+      let ws = null;
+      const log = document.getElementById("log");
+      const status = document.getElementById("status");
+      const connectBtn = document.getElementById("connectBtn");
+      const disconnectBtn = document.getElementById("disconnectBtn");
+
+      function addLog(msg, cls = "") {
+        const div = document.createElement("div");
+        div.className = cls;
+        div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function setStatus(connected) {
+        if (connected) {
+          status.textContent = "Connected";
+          status.className = "connected";
+          connectBtn.disabled = true;
+          disconnectBtn.disabled = false;
+        } else {
+          status.textContent = "Disconnected";
+          status.className = "disconnected";
+          connectBtn.disabled = false;
+          disconnectBtn.disabled = true;
+        }
+      }
+
+      function connect() {
+        const apiKey = document.getElementById("apiKey").value;
+        if (!apiKey) {
+          addLog("Please enter your API key", "error");
+          return;
+        }
+
+        addLog("Connecting to OilPriceAPI WebSocket...", "info");
+        ws = new WebSocket(`wss://api.oilpriceapi.com/cable?token=${apiKey}`);
+
+        ws.onopen = () => {
+          setStatus(true);
+          addLog("Connected! Subscribing to EnergyPricesChannel...", "info");
+          ws.send(
+            JSON.stringify({
+              command: "subscribe",
+              identifier: JSON.stringify({ channel: "EnergyPricesChannel" }),
+            }),
+          );
+        };
+
+        ws.onmessage = (e) => {
+          const msg = JSON.parse(e.data);
+          if (msg.type === "ping") return;
+          if (msg.type === "welcome") {
+            addLog("Server welcomed connection", "info");
+            return;
+          }
+          if (msg.type === "confirm_subscription") {
+            addLog(
+              "Subscribed to EnergyPricesChannel - waiting for price updates...",
+              "info",
+            );
+            return;
+          }
+          if (msg.message) {
+            addLog("Price Update: " + JSON.stringify(msg.message), "price");
+          }
+        };
+
+        ws.onerror = (e) => {
+          addLog(
+            "Connection error - check API key and WebSocket access",
+            "error",
+          );
+        };
+
+        ws.onclose = () => {
+          setStatus(false);
+          addLog("Connection closed", "info");
+        };
+      }
+
+      function disconnect() {
+        if (ws) {
+          ws.close();
+          ws = null;
+        }
+      }
+    </script>
+  </body>
+</html>

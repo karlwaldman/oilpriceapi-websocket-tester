@@ -1,0 +1,21 @@
+{
+  "name": "oilpriceapi-websocket-tester",
+  "version": "1.0.0",
+  "description": "Test your WebSocket connection to OilPriceAPI's real-time energy price feed",
+  "main": "cli/index.js",
+  "scripts": {
+    "test": "node cli/index.js"
+  },
+  "keywords": [
+    "oilpriceapi",
+    "websocket",
+    "energy",
+    "prices",
+    "actioncable"
+  ],
+  "author": "OilPriceAPI",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}
