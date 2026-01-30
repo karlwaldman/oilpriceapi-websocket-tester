@@ -5,7 +5,7 @@ Test your WebSocket connection to OilPriceAPI's real-time energy price feed.
 ## Prerequisites
 
 - OilPriceAPI account with WebSocket access (Reservoir Mastery tier or websocket add-on)
-- Your API key from https://oilpriceapi.com/api-keys
+- Your API key from https://oilpriceapi.com/dashboard
 
 ## Quick Start
 
