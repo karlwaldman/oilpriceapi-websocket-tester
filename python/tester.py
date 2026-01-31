@@ -248,7 +248,7 @@ def update_prices(data):
                 }
             if wp.get("by_state"):
                 # Get all states by 7d count (sorted descending)
-                states = [(state, data.get("count_7d", 0)) for state, data in wp["by_state"].items()]
+                states = [(state, (data.get("count_7d", 0) if data else 0)) for state, data in wp["by_state"].items()]
                 states.sort(key=lambda x: x[1], reverse=True)
                 well_permits["top_states"] = states
             well_permits["last_updated"] = wp.get("last_updated", now)
@@ -456,9 +456,14 @@ def on_message(ws, message):
         if msg.get("type") == "welcome":
             add_log("Server welcomed connection")
             # Welcome message includes initial price data
-            if msg.get("data", {}).get("prices"):
-                update_prices(msg["data"])
-                add_log("Initial prices received", "price")
+            try:
+                welcome_data = msg.get("data") or {}
+                if isinstance(welcome_data, dict) and welcome_data.get("prices"):
+                    update_prices(welcome_data)
+                    add_log("Initial prices received", "price")
+            except Exception as e:
+                if args.verbose:
+                    add_log(f"Error processing welcome data: {e}", "error")
             return
 
         if msg.get("type") == "confirm_subscription":
@@ -475,8 +480,13 @@ def on_message(ws, message):
             msg_type = msg["message"].get("type", "update")
 
             # Update price state
-            if msg["message"].get("prices") or (msg["message"].get("data") and msg["message"]["data"].get("prices")):
-                update_prices(msg["message"].get("data", msg["message"]))
+            try:
+                msg_data = msg["message"].get("data") or {}
+                if msg["message"].get("prices") or (isinstance(msg_data, dict) and msg_data.get("prices")):
+                    update_prices(msg_data if msg_data.get("prices") else msg["message"])
+            except Exception as e:
+                if args.verbose:
+                    add_log(f"Error processing prices: {e}", "error")
 
             if args.verbose:
                 add_log(f"{msg_type}: {json.dumps(msg['message'])}", "price")
@@ -560,8 +570,8 @@ def run_websocket():
     )
 
     ws.run_forever(
-        ping_interval=20,
-        ping_timeout=CONNECTION_TIMEOUT_SEC
+        ping_interval=60,
+        ping_timeout=10
     )
 
 
