@@ -47,6 +47,26 @@ prices = {
     "natgas_uk": {"value": None, "change": None, "updated": None},
 }
 
+# Drilling intelligence state
+drilling = {
+    "rig_us": {"value": None, "label": "US Rig Count"},
+    "rig_canada": {"value": None, "label": "Canada Rigs"},
+    "rig_intl": {"value": None, "label": "Intl Rigs"},
+    "frac_permian": {"value": None, "label": "Permian Frac"},
+    "frac_eagle_ford": {"value": None, "label": "Eagle Ford Frac"},
+    "frac_bakken": {"value": None, "label": "Bakken Frac"},
+    "duc_permian": {"value": None, "label": "Permian DUC"},
+    "duc_eagle_ford": {"value": None, "label": "Eagle Ford DUC"},
+    "duc_bakken": {"value": None, "label": "Bakken DUC"},
+}
+
+# Well permits state (new structure)
+well_permits = {
+    "summary": {"total_7d": None, "total_30d": None, "active_states": None},
+    "top_states": [],  # Top 5 states by 7d count
+    "last_updated": None,
+}
+
 
 # ANSI codes
 class C:
@@ -184,6 +204,55 @@ def update_prices(data):
                 "updated": now,
             }
 
+    # Update drilling intelligence
+    di = data.get("drilling_intelligence", {})
+    if di:
+        # Rig counts
+        if di.get("rig_counts"):
+            rc = di["rig_counts"]
+            if rc.get("us_rigs", {}).get("value") is not None:
+                drilling["rig_us"]["value"] = rc["us_rigs"]["value"]
+            if rc.get("canada_rigs", {}).get("value") is not None:
+                drilling["rig_canada"]["value"] = rc["canada_rigs"]["value"]
+            if rc.get("international_rigs", {}).get("value") is not None:
+                drilling["rig_intl"]["value"] = rc["international_rigs"]["value"]
+
+        # Frac spreads
+        if di.get("frac_spreads"):
+            fs = di["frac_spreads"]
+            if fs.get("permian", {}).get("value") is not None:
+                drilling["frac_permian"]["value"] = fs["permian"]["value"]
+            if fs.get("eagle_ford", {}).get("value") is not None:
+                drilling["frac_eagle_ford"]["value"] = fs["eagle_ford"]["value"]
+            if fs.get("bakken", {}).get("value") is not None:
+                drilling["frac_bakken"]["value"] = fs["bakken"]["value"]
+
+        # DUC wells
+        if di.get("duc_wells"):
+            duc = di["duc_wells"]
+            if duc.get("permian", {}).get("value") is not None:
+                drilling["duc_permian"]["value"] = duc["permian"]["value"]
+            if duc.get("eagle_ford", {}).get("value") is not None:
+                drilling["duc_eagle_ford"]["value"] = duc["eagle_ford"]["value"]
+            if duc.get("bakken", {}).get("value") is not None:
+                drilling["duc_bakken"]["value"] = duc["bakken"]["value"]
+
+        # Well permits (new structure with summary + by_state)
+        if di.get("well_permits"):
+            wp = di["well_permits"]
+            if wp.get("summary"):
+                well_permits["summary"] = {
+                    "total_7d": wp["summary"].get("total_permits_7d"),
+                    "total_30d": wp["summary"].get("total_permits_30d"),
+                    "active_states": wp["summary"].get("active_states"),
+                }
+            if wp.get("by_state"):
+                # Get all states by 7d count (sorted descending)
+                states = [(state, data.get("count_7d", 0)) for state, data in wp["by_state"].items()]
+                states.sort(key=lambda x: x[1], reverse=True)
+                well_permits["top_states"] = states
+            well_permits["last_updated"] = wp.get("last_updated", now)
+
 
 def format_price_display(label, price, unit="$", suffix=""):
     if price["value"] is None:
@@ -244,6 +313,33 @@ def render_display():
     lines.append(f"{C.BOLD}{C.WHITE}│{C.RESET}  {format_price_display('US Natural Gas', prices['natgas_us'], '$', '/MMBtu')}      {C.BOLD}{C.WHITE}│{C.RESET}")
     lines.append(f"{C.BOLD}{C.WHITE}│{C.RESET}  {format_price_display('UK Natural Gas', prices['natgas_uk'], '', 'p/therm')}      {C.BOLD}{C.WHITE}│{C.RESET}")
     lines.append(f"{C.BOLD}{C.WHITE}└─────────────────────────────────────────────────────────┘{C.RESET}")
+
+    # Drilling Intelligence section (if --all flag and data available)
+    has_drilling_data = any(d["value"] is not None for d in drilling.values())
+    if args and args.all and has_drilling_data:
+        lines.append("")
+        lines.append(f"{C.BOLD}{C.WHITE}┌─────────────────────────────────────────────────────────┐{C.RESET}")
+        lines.append(f"{C.BOLD}{C.WHITE}│{C.RESET}              {C.BOLD}DRILLING INTELLIGENCE{C.RESET}                   {C.BOLD}{C.WHITE}│{C.RESET}")
+        lines.append(f"{C.BOLD}{C.WHITE}├─────────────────────────────────────────────────────────┤{C.RESET}")
+        for key, data in drilling.items():
+            if data["value"] is not None:
+                label = data.get("label", key)
+                val_str = f"{data['value']}"
+                lines.append(f"{C.BOLD}{C.WHITE}│{C.RESET}  {C.CYAN}{label:<16}{C.RESET}{C.BOLD}{val_str:<10}{C.RESET}                             {C.BOLD}{C.WHITE}│{C.RESET}")
+        lines.append(f"{C.BOLD}{C.WHITE}└─────────────────────────────────────────────────────────┘{C.RESET}")
+
+    # Well Permits section (if --all flag and data available)
+    if args and args.all and well_permits["summary"]["total_7d"] is not None:
+        lines.append("")
+        lines.append(f"{C.BOLD}{C.WHITE}┌─────────────────────────────────────────────────────────┐{C.RESET}")
+        lines.append(f"{C.BOLD}{C.WHITE}│{C.RESET}               {C.BOLD}WELL PERMITS (26 States){C.RESET}                {C.BOLD}{C.WHITE}│{C.RESET}")
+        lines.append(f"{C.BOLD}{C.WHITE}├─────────────────────────────────────────────────────────┤{C.RESET}")
+        summary = well_permits["summary"]
+        lines.append(f"{C.BOLD}{C.WHITE}│{C.RESET}  {C.CYAN}National:{C.RESET} {C.BOLD}{summary['total_7d']}{C.RESET} (7d)  {C.BOLD}{summary['total_30d']}{C.RESET} (30d)  {C.GRAY}{summary['active_states']} states{C.RESET}    {C.BOLD}{C.WHITE}│{C.RESET}")
+        lines.append(f"{C.BOLD}{C.WHITE}│{C.RESET}  {C.GRAY}All states (7d):{C.RESET}                                     {C.BOLD}{C.WHITE}│{C.RESET}")
+        for state, count in well_permits["top_states"]:
+            lines.append(f"{C.BOLD}{C.WHITE}│{C.RESET}    {C.CYAN}{state}{C.RESET}: {C.BOLD}{count}{C.RESET}                                            {C.BOLD}{C.WHITE}│{C.RESET}")
+        lines.append(f"{C.BOLD}{C.WHITE}└─────────────────────────────────────────────────────────┘{C.RESET}")
 
     # Last update time
     last_update = prices["brent"]["updated"] or prices["wti"]["updated"] or prices["natgas_us"]["updated"] or "--"
@@ -486,6 +582,7 @@ Examples:
     )
     parser.add_argument("api_key", help="Your OilPriceAPI key")
     parser.add_argument("-l", "--local", action="store_true", help="Use localhost:5000")
+    parser.add_argument("-a", "--all", action="store_true", help="Show all measures (drilling data, well permits)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed info")
     parser.add_argument("-p", "--pings", action="store_true", help="Show ping messages")
     parser.add_argument("-e", "--export", action="store_true", help="Export log on exit")

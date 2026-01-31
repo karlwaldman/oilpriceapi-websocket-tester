@@ -52,6 +52,45 @@
         "canada_rigs": { "enabled": true, "label": "Canada Rig Count" },
         "international_rigs": { "enabled": true, "label": "Intl Rig Count" }
       },
+      "frac_spreads": {
+        "permian": { "enabled": true, "label": "Permian Frac Spreads" },
+        "eagle_ford": { "enabled": true, "label": "Eagle Ford Frac" },
+        "bakken": { "enabled": true, "label": "Bakken Frac Spreads" }
+      },
+      "well_permits": {
+        "_comment": "New structure: summary + by_state with all 26 US states",
+        "enabled": true,
+        "label": "Well Permits (26 States)",
+        "states": [
+          "TX",
+          "OK",
+          "NM",
+          "CO",
+          "ND",
+          "PA",
+          "WY",
+          "MT",
+          "LA",
+          "KS",
+          "CA",
+          "AK",
+          "OH",
+          "WV",
+          "AR",
+          "MS",
+          "UT",
+          "NE",
+          "NY",
+          "MI",
+          "FL",
+          "IN",
+          "TN",
+          "KY",
+          "VA",
+          "IL",
+          "AL"
+        ]
+      },
       "duc_wells": {
         "permian": { "enabled": true, "label": "Permian DUC Wells" },
         "eagle_ford": { "enabled": true, "label": "Eagle Ford DUC" },

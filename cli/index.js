@@ -132,6 +132,13 @@ function initPriceState() {
         }
       }
     }
+    if (di.frac_spreads) {
+      for (const [key, cfg] of Object.entries(di.frac_spreads)) {
+        if (cfg.enabled !== false) {
+          drilling[`frac_${key}`] = { value: null, updated: null, config: cfg };
+        }
+      }
+    }
     if (di.duc_wells) {
       for (const [key, cfg] of Object.entries(di.duc_wells)) {
         if (cfg.enabled !== false) {
@@ -141,6 +148,13 @@ function initPriceState() {
     }
   }
 }
+
+// Well permits state (separate from drilling for clarity)
+const wellPermits = {
+  summary: { total_7d: null, total_30d: null, active_states: null },
+  topStates: [], // Top 5 states by 7d count
+  lastUpdated: null,
+};
 
 // Set defaults if no config
 if (!config.measures) {
@@ -307,6 +321,16 @@ function updatePrices(data) {
       }
     }
 
+    if (di.frac_spreads) {
+      for (const [key, info] of Object.entries(di.frac_spreads)) {
+        const stateKey = `frac_${key}`;
+        if (drilling[stateKey] && info?.value !== undefined) {
+          drilling[stateKey].value = info.value;
+          drilling[stateKey].updated = now;
+        }
+      }
+    }
+
     if (di.duc_wells) {
       for (const [key, info] of Object.entries(di.duc_wells)) {
         const stateKey = `duc_${key}`;
@@ -315,6 +339,25 @@ function updatePrices(data) {
           drilling[stateKey].updated = now;
         }
       }
+    }
+
+    // Update well permits (new structure: summary + by_state)
+    if (di.well_permits) {
+      const wp = di.well_permits;
+      if (wp.summary) {
+        wellPermits.summary = {
+          total_7d: wp.summary.total_permits_7d,
+          total_30d: wp.summary.total_permits_30d,
+          active_states: wp.summary.active_states,
+        };
+      }
+      if (wp.by_state) {
+        // Get all states by 7d count (sorted descending)
+        wellPermits.topStates = Object.entries(wp.by_state)
+          .map(([state, data]) => ({ state, count_7d: data.count_7d || 0 }))
+          .sort((a, b) => b.count_7d - a.count_7d);
+      }
+      wellPermits.lastUpdated = wp.last_updated || now;
     }
   }
 }
@@ -428,6 +471,42 @@ function renderDisplay() {
       const label = cfg.label || key;
       output.push(
         `${BOLD}${FG_WHITE}│${RESET}  ${formatDrillingDisplay(label, data).padEnd(55)}${BOLD}${FG_WHITE}│${RESET}`,
+      );
+    }
+
+    output.push(
+      `${BOLD}${FG_WHITE}└─────────────────────────────────────────────────────────┘${RESET}`,
+    );
+  }
+
+  // Well Permits section (if --all flag and data available)
+  if (flags.all && wellPermits.summary.total_7d !== null) {
+    output.push("");
+    output.push(
+      `${BOLD}${FG_WHITE}┌─────────────────────────────────────────────────────────┐${RESET}`,
+    );
+    output.push(
+      `${BOLD}${FG_WHITE}│${RESET}               ${BOLD}WELL PERMITS (26 States)${RESET}                ${BOLD}${FG_WHITE}│${RESET}`,
+    );
+    output.push(
+      `${BOLD}${FG_WHITE}├─────────────────────────────────────────────────────────┤${RESET}`,
+    );
+
+    // Summary line
+    const summary = wellPermits.summary;
+    output.push(
+      `${BOLD}${FG_WHITE}│${RESET}  ${FG_CYAN}National:${RESET} ${BOLD}${summary.total_7d}${RESET} (7d)  ${BOLD}${summary.total_30d}${RESET} (30d)  ${FG_GRAY}${summary.active_states} active states${RESET}   ${BOLD}${FG_WHITE}│${RESET}`,
+    );
+
+    output.push(
+      `${BOLD}${FG_WHITE}│${RESET}  ${FG_GRAY}All states (7d):${RESET}                                     ${BOLD}${FG_WHITE}│${RESET}`,
+    );
+
+    // Top 5 states
+    for (const { state, count_7d } of wellPermits.topStates) {
+      const stateDisplay = `${FG_MAGENTA}${state}${RESET}: ${BOLD}${count_7d}${RESET}`;
+      output.push(
+        `${BOLD}${FG_WHITE}│${RESET}    ${stateDisplay.padEnd(60)}${BOLD}${FG_WHITE}│${RESET}`,
       );
     }
 
