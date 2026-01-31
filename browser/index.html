@@ -8,7 +8,7 @@
           system-ui,
           -apple-system,
           sans-serif;
-        max-width: 800px;
+        max-width: 900px;
         margin: 40px auto;
         padding: 20px;
         background: #f5f5f5;
@@ -23,7 +23,24 @@
         align-items: center;
         flex-wrap: wrap;
       }
-      input {
+      .options {
+        margin: 15px 0;
+        padding: 15px;
+        background: #e9ecef;
+        border-radius: 8px;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .options label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+      }
+      input[type="text"],
+      input[type="password"] {
         width: 300px;
         padding: 10px;
         font-size: 16px;
@@ -52,6 +69,12 @@
       .clear-btn:hover {
         background: #5a6268;
       }
+      .export-btn {
+        background: #28a745;
+      }
+      .export-btn:hover {
+        background: #218838;
+      }
       #status {
         padding: 8px 16px;
         border-radius: 4px;
@@ -69,15 +92,63 @@
         background: #fff3cd;
         color: #856404;
       }
+      .stats {
+        display: flex;
+        gap: 20px;
+        margin: 10px 0;
+        font-size: 14px;
+        color: #666;
+      }
+      .stats span {
+        background: #e9ecef;
+        padding: 5px 10px;
+        border-radius: 4px;
+      }
+      .price-display {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin: 15px 0;
+      }
+      .price-card {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .price-card .label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+      }
+      .price-card .value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #1a1a2e;
+      }
+      .price-card .change {
+        font-size: 14px;
+      }
+      .price-card .change.up {
+        color: #28a745;
+      }
+      .price-card .change.down {
+        color: #dc3545;
+      }
+      .price-card .timestamp {
+        font-size: 11px;
+        color: #999;
+        margin-top: 5px;
+      }
       #log {
         background: #1a1a2e;
         color: #0f0;
         padding: 20px;
-        height: 400px;
+        height: 300px;
         overflow-y: auto;
         font-family: "Courier New", monospace;
         border-radius: 8px;
-        font-size: 14px;
+        font-size: 13px;
         line-height: 1.4;
       }
       .error {
@@ -89,6 +160,9 @@
       .price {
         color: #90ee90;
       }
+      .warn {
+        color: #ffd93d;
+      }
       .log-count {
         font-size: 12px;
         color: #666;
@@ -99,7 +173,7 @@
   <body>
     <h1>OilPriceAPI WebSocket Tester</h1>
     <p>
-      Enter your API key to test the real-time price feed. Get your key at
+      Test your real-time price feed connection. Get your API key at
       <a href="https://oilpriceapi.com/dashboard">oilpriceapi.com/dashboard</a>
     </p>
 
@@ -108,38 +182,141 @@
       <button id="connectBtn">Connect</button>
       <button id="disconnectBtn" disabled>Disconnect</button>
       <button id="clearBtn" class="clear-btn">Clear Log</button>
+      <button id="exportBtn" class="export-btn">Export Log</button>
       <span id="status" class="disconnected">Disconnected</span>
+    </div>
+
+    <div class="options">
+      <label>
+        <input type="checkbox" id="localMode" />
+        Local Development (localhost:5000)
+      </label>
+      <label>
+        <input type="checkbox" id="showPings" />
+        Show Ping Messages
+      </label>
+      <label>
+        <input type="checkbox" id="verboseMode" />
+        Verbose Mode
+      </label>
+      <div>
+        <label for="customUrl">Custom URL:</label>
+        <input
+          type="text"
+          id="customUrl"
+          placeholder="wss://custom.endpoint.com/cable"
+          style="width: 250px"
+        />
+      </div>
+    </div>
+
+    <div class="stats">
+      <span>Messages: <strong id="msgCount">0</strong></span>
+      <span>Bytes: <strong id="bytesCount">0</strong></span>
+      <span>Rate: <strong id="msgRate">0</strong>/sec</span>
+      <span>Latency: <strong id="latency">-</strong></span>
+      <span>Uptime: <strong id="uptime">0s</strong></span>
+    </div>
+
+    <div class="price-display" id="priceDisplay">
+      <div class="price-card" id="card-brent">
+        <div class="label">Brent Crude</div>
+        <div class="value">--</div>
+        <div class="change">--</div>
+        <div class="timestamp">Waiting for data...</div>
+      </div>
+      <div class="price-card" id="card-wti">
+        <div class="label">WTI Crude</div>
+        <div class="value">--</div>
+        <div class="change">--</div>
+        <div class="timestamp">Waiting for data...</div>
+      </div>
+      <div class="price-card" id="card-natgas-us">
+        <div class="label">US Natural Gas</div>
+        <div class="value">--</div>
+        <div class="change">--</div>
+        <div class="timestamp">Waiting for data...</div>
+      </div>
+      <div class="price-card" id="card-natgas-uk">
+        <div class="label">UK Natural Gas</div>
+        <div class="value">--</div>
+        <div class="change">--</div>
+        <div class="timestamp">Waiting for data...</div>
+      </div>
     </div>
 
     <div id="log"></div>
     <div class="log-count">
-      Messages: <span id="msgCount">0</span> (max 1000)
+      Log entries: <span id="logCount">0</span> / 1000
     </div>
 
     <script>
       // Configuration
-      const DEFAULT_URL = "wss://api.oilpriceapi.com/cable";
+      const PROD_URL = "wss://api.oilpriceapi.com/cable";
+      const LOCAL_URL = "ws://localhost:5000/cable";
       const CHANNEL = "EnergyPricesChannel";
       const CONNECTION_TIMEOUT_MS = 30000;
       const MAX_RECONNECT_ATTEMPTS = 5;
       const MAX_LOG_ENTRIES = 1000;
 
+      // State
       let ws = null;
       let reconnectAttempts = 0;
       let connectionTimeout = null;
       let messageCount = 0;
+      let bytesReceived = 0;
+      let connectionStartTime = null;
+      let lastMessageTime = null;
+      let messagesInLastSecond = 0;
+      let lastPingTime = null;
+      let uptimeInterval = null;
+      let rateInterval = null;
 
+      // DOM elements
       const log = document.getElementById("log");
       const status = document.getElementById("status");
       const connectBtn = document.getElementById("connectBtn");
       const disconnectBtn = document.getElementById("disconnectBtn");
       const clearBtn = document.getElementById("clearBtn");
+      const exportBtn = document.getElementById("exportBtn");
       const msgCount = document.getElementById("msgCount");
+      const bytesCount = document.getElementById("bytesCount");
+      const msgRate = document.getElementById("msgRate");
+      const latencyEl = document.getElementById("latency");
+      const uptimeEl = document.getElementById("uptime");
+      const logCount = document.getElementById("logCount");
+      const localMode = document.getElementById("localMode");
+      const showPings = document.getElementById("showPings");
+      const verboseMode = document.getElementById("verboseMode");
+      const customUrl = document.getElementById("customUrl");
 
-      // Use addEventListener instead of inline handlers
+      // Event listeners
       connectBtn.addEventListener("click", connect);
       disconnectBtn.addEventListener("click", disconnect);
       clearBtn.addEventListener("click", clearLog);
+      exportBtn.addEventListener("click", exportLog);
+
+      function getWebSocketUrl() {
+        if (customUrl.value.trim()) {
+          return customUrl.value.trim();
+        }
+        return localMode.checked ? LOCAL_URL : PROD_URL;
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+      }
+
+      function formatUptime(ms) {
+        const seconds = Math.floor(ms / 1000);
+        if (seconds < 60) return seconds + "s";
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return minutes + "m " + (seconds % 60) + "s";
+        const hours = Math.floor(minutes / 60);
+        return hours + "h " + (minutes % 60) + "m";
+      }
 
       function addLog(msg, cls = "") {
         // Rotate log if too many entries
@@ -149,19 +326,111 @@
 
         const div = document.createElement("div");
         div.className = cls;
-        div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        div.textContent = `[${new Date().toISOString().substr(11, 12)}] ${msg}`;
         log.appendChild(div);
         log.scrollTop = log.scrollHeight;
 
-        messageCount++;
-        msgCount.textContent = Math.min(messageCount, MAX_LOG_ENTRIES);
+        logCount.textContent = log.children.length;
       }
 
       function clearLog() {
         log.innerHTML = "";
-        messageCount = 0;
-        msgCount.textContent = "0";
+        logCount.textContent = "0";
         addLog("Log cleared", "info");
+      }
+
+      function exportLog() {
+        const lines = Array.from(log.children).map((div) => div.textContent);
+        const content = [
+          "OilPriceAPI WebSocket Tester - Log Export",
+          "Exported: " + new Date().toISOString(),
+          "URL: " + getWebSocketUrl(),
+          "Messages: " + messageCount,
+          "Bytes: " + formatBytes(bytesReceived),
+          "---",
+          ...lines,
+        ].join("\n");
+
+        const blob = new Blob([content], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `websocket-log-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addLog("Log exported", "info");
+      }
+
+      function updatePriceCard(id, label, price, change, timestamp) {
+        const card = document.getElementById(id);
+        if (!card) return;
+
+        card.querySelector(".label").textContent = label;
+        card.querySelector(".value").textContent = price;
+
+        const changeEl = card.querySelector(".change");
+        if (change !== null && change !== undefined) {
+          const arrow = change >= 0 ? "▲" : "▼";
+          changeEl.textContent = `${arrow} ${Math.abs(change).toFixed(2)}%`;
+          changeEl.className = "change " + (change >= 0 ? "up" : "down");
+        }
+
+        card.querySelector(".timestamp").textContent = timestamp;
+      }
+
+      function updatePriceDisplay(data) {
+        const prices = data.prices || data;
+        const ts = data.timestamp
+          ? new Date(data.timestamp).toLocaleTimeString()
+          : new Date().toLocaleTimeString();
+
+        if (prices.oil) {
+          if (prices.oil.brent) {
+            const p = prices.oil.brent;
+            updatePriceCard(
+              "card-brent",
+              "Brent Crude",
+              "$" +
+                (p.normalized_price || p.original_price / 100 || 0).toFixed(2),
+              p.change_percent,
+              "Updated: " + ts,
+            );
+          }
+          if (prices.oil.wti) {
+            const p = prices.oil.wti;
+            updatePriceCard(
+              "card-wti",
+              "WTI Crude",
+              "$" +
+                (p.normalized_price || p.original_price / 100 || 0).toFixed(2),
+              p.change_percent,
+              "Updated: " + ts,
+            );
+          }
+        }
+
+        if (prices.natural_gas) {
+          if (prices.natural_gas.us) {
+            const p = prices.natural_gas.us;
+            updatePriceCard(
+              "card-natgas-us",
+              "US Natural Gas",
+              "$" + (p.normalized_price || 0).toFixed(2) + "/MMBtu",
+              p.change_percent,
+              "Updated: " + ts,
+            );
+          }
+          if (prices.natural_gas.uk) {
+            const p = prices.natural_gas.uk;
+            updatePriceCard(
+              "card-natgas-uk",
+              "UK Natural Gas",
+              (p.normalized_price || 0).toFixed(2) + "p/therm",
+              p.change_percent,
+              "Updated: " + ts,
+            );
+          }
+        }
       }
 
       function setStatus(state) {
@@ -183,6 +452,32 @@
         }
       }
 
+      function startStatsTracking() {
+        connectionStartTime = Date.now();
+
+        // Update uptime every second
+        uptimeInterval = setInterval(() => {
+          if (connectionStartTime) {
+            uptimeEl.textContent = formatUptime(
+              Date.now() - connectionStartTime,
+            );
+          }
+        }, 1000);
+
+        // Calculate message rate every second
+        rateInterval = setInterval(() => {
+          msgRate.textContent = messagesInLastSecond;
+          messagesInLastSecond = 0;
+        }, 1000);
+      }
+
+      function stopStatsTracking() {
+        if (uptimeInterval) clearInterval(uptimeInterval);
+        if (rateInterval) clearInterval(rateInterval);
+        uptimeInterval = null;
+        rateInterval = null;
+      }
+
       function connect() {
         const apiKey = document.getElementById("apiKey").value;
         if (!apiKey) {
@@ -190,20 +485,47 @@
           return;
         }
 
+        // Reset stats
+        messageCount = 0;
+        bytesReceived = 0;
+        messagesInLastSecond = 0;
         reconnectAttempts = 0;
+
+        msgCount.textContent = "0";
+        bytesCount.textContent = "0 B";
+        msgRate.textContent = "0";
+        latencyEl.textContent = "-";
+        uptimeEl.textContent = "0s";
+
         doConnect(apiKey);
       }
 
       function doConnect(apiKey) {
-        setStatus("connecting");
-        addLog("Connecting to OilPriceAPI WebSocket...", "info");
+        const wsUrl = getWebSocketUrl();
+        const fullUrl = `${wsUrl}?token=${apiKey}`;
 
-        ws = new WebSocket(`${DEFAULT_URL}?token=${apiKey}`);
+        setStatus("connecting");
+        addLog(`Connecting to ${wsUrl}...`, "info");
+
+        if (verboseMode.checked) {
+          addLog(`User Agent: ${navigator.userAgent}`, "info");
+          addLog(
+            `Protocol: ${wsUrl.startsWith("wss") ? "WSS (secure)" : "WS (insecure)"}`,
+            "info",
+          );
+        }
+
+        const connectStart = Date.now();
+        ws = new WebSocket(fullUrl);
 
         // Set connection timeout
         connectionTimeout = setTimeout(() => {
           if (ws.readyState !== WebSocket.OPEN) {
             addLog("Connection timeout after 30 seconds", "error");
+            addLog(
+              "Check: API key valid? WebSocket access enabled? Network accessible?",
+              "warn",
+            );
             ws.close();
             handleReconnect(apiKey);
           }
@@ -211,9 +533,15 @@
 
         ws.onopen = () => {
           clearTimeout(connectionTimeout);
+          const latency = Date.now() - connectStart;
           reconnectAttempts = 0;
           setStatus("connected");
-          addLog("Connected! Subscribing to " + CHANNEL + "...", "info");
+          startStatsTracking();
+
+          addLog(`Connected in ${latency}ms`, "info");
+          latencyEl.textContent = latency + "ms";
+
+          addLog(`Subscribing to ${CHANNEL}...`, "info");
           ws.send(
             JSON.stringify({
               command: "subscribe",
@@ -223,43 +551,155 @@
         };
 
         ws.onmessage = (e) => {
+          const dataSize = e.data.length;
+          bytesReceived += dataSize;
+          bytesCount.textContent = formatBytes(bytesReceived);
+
           try {
             const msg = JSON.parse(e.data);
-            if (msg.type === "ping") return;
+
+            // Handle pings
+            if (msg.type === "ping") {
+              if (lastPingTime) {
+                const pingInterval = Date.now() - lastPingTime;
+                if (verboseMode.checked) {
+                  addLog(`Ping received (interval: ${pingInterval}ms)`, "info");
+                }
+              }
+              lastPingTime = Date.now();
+              if (showPings.checked) {
+                addLog("Ping: " + msg.message, "info");
+              }
+              return;
+            }
+
+            messageCount++;
+            messagesInLastSecond++;
+            msgCount.textContent = messageCount;
+            lastMessageTime = Date.now();
+
             if (msg.type === "welcome") {
               addLog("Server welcomed connection", "info");
               return;
             }
+
             if (msg.type === "confirm_subscription") {
               addLog(
-                "Subscribed to " + CHANNEL + " - waiting for price updates...",
+                `Subscribed to ${CHANNEL} - waiting for price updates...`,
                 "info",
               );
               return;
             }
+
+            if (msg.type === "reject_subscription") {
+              addLog(
+                "Subscription REJECTED - check your API key and tier",
+                "error",
+              );
+              addLog(
+                "WebSocket requires Reservoir Mastery tier ($129/mo) or websocket add-on",
+                "warn",
+              );
+              return;
+            }
+
             if (msg.message) {
-              addLog("Price Update: " + JSON.stringify(msg.message), "price");
+              // Update price cards
+              if (msg.message.prices || msg.message.data?.prices) {
+                updatePriceDisplay(msg.message.data || msg.message);
+              }
+
+              // Log the message
+              const msgType = msg.message.type || "update";
+              if (verboseMode.checked) {
+                addLog(`${msgType}: ${JSON.stringify(msg.message)}`, "price");
+              } else {
+                addLog(`Price update received (${msgType})`, "price");
+              }
             }
           } catch (err) {
             addLog("Failed to parse message: " + err.message, "error");
+            if (verboseMode.checked) {
+              addLog("Raw: " + e.data.substring(0, 200), "warn");
+            }
           }
         };
 
         ws.onerror = (e) => {
           clearTimeout(connectionTimeout);
-          addLog(
-            "Connection error - check API key and WebSocket access",
-            "error",
-          );
+          addLog("Connection error", "error");
+
+          // Try to provide helpful error messages
+          if (wsUrl.startsWith("wss://") && localMode.checked) {
+            addLog("Note: Local mode uses ws:// not wss://", "warn");
+          }
         };
 
         ws.onclose = (e) => {
           clearTimeout(connectionTimeout);
+          stopStatsTracking();
           setStatus("disconnected");
-          addLog(`Connection closed (code: ${e.code})`, "info");
 
-          // Only auto-reconnect if we were connected before
-          if (reconnectAttempts > 0 || e.code !== 1000) {
+          let reason = "";
+          switch (e.code) {
+            case 1000:
+              reason = "Normal closure";
+              break;
+            case 1001:
+              reason = "Going away";
+              break;
+            case 1002:
+              reason = "Protocol error";
+              break;
+            case 1003:
+              reason = "Unsupported data";
+              break;
+            case 1006:
+              reason = "Abnormal closure (no close frame)";
+              break;
+            case 1007:
+              reason = "Invalid payload";
+              break;
+            case 1008:
+              reason = "Policy violation";
+              break;
+            case 1009:
+              reason = "Message too big";
+              break;
+            case 1011:
+              reason = "Server error";
+              break;
+            case 1015:
+              reason = "TLS handshake failed";
+              break;
+            case 4001:
+              reason = "Unauthorized - invalid API key";
+              break;
+            case 4003:
+              reason = "Forbidden - WebSocket access not enabled";
+              break;
+            default:
+              reason = e.reason || "Unknown";
+          }
+
+          addLog(
+            `Connection closed: ${e.code} - ${reason}`,
+            e.code === 1000 ? "info" : "error",
+          );
+
+          // Provide specific help for auth errors
+          if (e.code === 4001 || e.code === 4003 || e.code === 1006) {
+            addLog("Troubleshooting:", "warn");
+            addLog("  1. Verify API key is correct", "warn");
+            addLog(
+              "  2. Ensure Reservoir Mastery tier or websocket add-on",
+              "warn",
+            );
+            addLog("  3. Check https://oilpriceapi.com/dashboard", "warn");
+          }
+
+          // Only auto-reconnect if we were connected before and it wasn't a normal close
+          if (e.code !== 1000 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             const apiKey = document.getElementById("apiKey").value;
             if (apiKey) handleReconnect(apiKey);
           }
@@ -272,6 +712,7 @@
             `Max reconnection attempts (${MAX_RECONNECT_ATTEMPTS}) reached.`,
             "error",
           );
+          addLog("Click Connect to try again.", "info");
           return;
         }
 
@@ -287,9 +728,11 @@
 
       function disconnect() {
         clearTimeout(connectionTimeout);
+        stopStatsTracking();
         reconnectAttempts = MAX_RECONNECT_ATTEMPTS; // Prevent auto-reconnect
         if (ws) {
-          ws.close();
+          addLog("Disconnecting...", "info");
+          ws.close(1000, "User requested disconnect");
           ws = null;
         }
       }
