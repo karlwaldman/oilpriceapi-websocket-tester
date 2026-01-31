@@ -1,0 +1,62 @@
+{
+  "connection": {
+    "url": "wss://api.oilpriceapi.com/cable",
+    "localUrl": "ws://localhost:5000/cable",
+    "channel": "EnergyPricesChannel",
+    "timeoutMs": 30000,
+    "maxReconnectAttempts": 5
+  },
+  "display": {
+    "refreshMs": 500,
+    "maxLogLines": 8
+  },
+  "measures": {
+    "oil": {
+      "brent": {
+        "enabled": true,
+        "label": "Brent Crude",
+        "unit": "$",
+        "suffix": "/bbl"
+      },
+      "wti": {
+        "enabled": true,
+        "label": "WTI Crude",
+        "unit": "$",
+        "suffix": "/bbl"
+      }
+    },
+    "natural_gas": {
+      "us": {
+        "enabled": true,
+        "label": "US Natural Gas",
+        "unit": "$",
+        "suffix": "/MMBtu"
+      },
+      "uk": {
+        "enabled": true,
+        "label": "UK Natural Gas",
+        "unit": "",
+        "suffix": "p/therm"
+      },
+      "eu": {
+        "enabled": true,
+        "label": "EU Natural Gas",
+        "unit": "€",
+        "suffix": "/MMBtu"
+      }
+    },
+    "drilling_intelligence": {
+      "enabled": true,
+      "rig_counts": {
+        "us_rigs": { "enabled": true, "label": "US Rig Count" },
+        "canada_rigs": { "enabled": true, "label": "Canada Rig Count" },
+        "international_rigs": { "enabled": true, "label": "Intl Rig Count" }
+      },
+      "duc_wells": {
+        "permian": { "enabled": true, "label": "Permian DUC Wells" },
+        "eagle_ford": { "enabled": true, "label": "Eagle Ford DUC" },
+        "bakken": { "enabled": true, "label": "Bakken DUC Wells" }
+      }
+    }
+  }
+}
