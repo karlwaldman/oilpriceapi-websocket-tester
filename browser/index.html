@@ -140,6 +140,85 @@
         color: #999;
         margin-top: 5px;
       }
+      .section-header {
+        font-size: 14px;
+        font-weight: bold;
+        color: #666;
+        text-transform: uppercase;
+        margin: 20px 0 10px 0;
+        padding-bottom: 5px;
+        border-bottom: 2px solid #e9ecef;
+      }
+      .drilling-card {
+        background: white;
+        padding: 12px 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #6f42c1;
+      }
+      .drilling-card .label {
+        font-size: 12px;
+        color: #666;
+      }
+      .drilling-card .value {
+        font-size: 20px;
+        font-weight: bold;
+        color: #6f42c1;
+      }
+      .permits-section {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin: 15px 0;
+        display: none;
+      }
+      .permits-section.visible {
+        display: block;
+      }
+      .permits-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e9ecef;
+      }
+      .permits-header h3 {
+        margin: 0;
+        color: #1a1a2e;
+        font-size: 16px;
+      }
+      .permits-summary {
+        font-size: 14px;
+        color: #666;
+      }
+      .permits-summary strong {
+        color: #1a1a2e;
+      }
+      .permits-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+      }
+      .permit-state {
+        background: #f8f9fa;
+        padding: 8px 12px;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .permit-state .state {
+        font-weight: bold;
+        color: #6f42c1;
+      }
+      .permit-state .count {
+        color: #1a1a2e;
+      }
+      .hidden {
+        display: none !important;
+      }
       #log {
         background: #1a1a2e;
         color: #0f0;
@@ -199,6 +278,10 @@
         <input type="checkbox" id="verboseMode" />
         Verbose Mode
       </label>
+      <label>
+        <input type="checkbox" id="showAllMeasures" checked />
+        Show All Measures
+      </label>
       <div>
         <label for="customUrl">Custom URL:</label>
         <input
@@ -242,6 +325,50 @@
         <div class="value">--</div>
         <div class="change">--</div>
         <div class="timestamp">Waiting for data...</div>
+      </div>
+    </div>
+
+    <div id="drillingSection" class="hidden">
+      <div class="section-header">Drilling Intelligence</div>
+      <div class="price-display">
+        <div class="drilling-card" id="card-rig-us">
+          <div class="label">US Rig Count</div>
+          <div class="value">--</div>
+        </div>
+        <div class="drilling-card" id="card-rig-canada">
+          <div class="label">Canada Rig Count</div>
+          <div class="value">--</div>
+        </div>
+        <div class="drilling-card" id="card-rig-intl">
+          <div class="label">Intl Rig Count</div>
+          <div class="value">--</div>
+        </div>
+        <div class="drilling-card" id="card-duc-permian">
+          <div class="label">Permian DUC Wells</div>
+          <div class="value">--</div>
+        </div>
+        <div class="drilling-card" id="card-duc-eagleford">
+          <div class="label">Eagle Ford DUC</div>
+          <div class="value">--</div>
+        </div>
+        <div class="drilling-card" id="card-duc-bakken">
+          <div class="label">Bakken DUC Wells</div>
+          <div class="value">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="permitsSection" class="permits-section">
+      <div class="permits-header">
+        <h3>Well Permits (26 States)</h3>
+        <div class="permits-summary">
+          <strong id="permits7d">--</strong> (7d) &nbsp;|&nbsp;
+          <strong id="permits30d">--</strong> (30d) &nbsp;|&nbsp;
+          <span id="permitsStates">--</span> active states
+        </div>
+      </div>
+      <div class="permits-grid" id="permitsGrid">
+        <!-- Populated dynamically -->
       </div>
     </div>
 
@@ -289,6 +416,23 @@
       const showPings = document.getElementById("showPings");
       const verboseMode = document.getElementById("verboseMode");
       const customUrl = document.getElementById("customUrl");
+      const showAllMeasures = document.getElementById("showAllMeasures");
+      const drillingSection = document.getElementById("drillingSection");
+      const permitsSection = document.getElementById("permitsSection");
+
+      // Toggle drilling/permits visibility
+      showAllMeasures.addEventListener("change", () => {
+        if (showAllMeasures.checked) {
+          drillingSection.classList.remove("hidden");
+        } else {
+          drillingSection.classList.add("hidden");
+          permitsSection.classList.remove("visible");
+        }
+      });
+      // Initialize visibility
+      if (showAllMeasures.checked) {
+        drillingSection.classList.remove("hidden");
+      }
 
       // Event listeners
       connectBtn.addEventListener("click", connect);
@@ -376,6 +520,91 @@
         }
 
         card.querySelector(".timestamp").textContent = timestamp;
+      }
+
+      function updateDrillingCard(id, value) {
+        const card = document.getElementById(id);
+        if (!card || value === null || value === undefined) return;
+        card.querySelector(".value").textContent = value;
+      }
+
+      function updateDrillingDisplay(di) {
+        if (!di || !showAllMeasures.checked) return;
+
+        // Rig counts
+        if (di.rig_counts) {
+          if (di.rig_counts.us_rigs?.value !== undefined) {
+            updateDrillingCard("card-rig-us", di.rig_counts.us_rigs.value);
+          }
+          if (di.rig_counts.canada_rigs?.value !== undefined) {
+            updateDrillingCard(
+              "card-rig-canada",
+              di.rig_counts.canada_rigs.value,
+            );
+          }
+          if (di.rig_counts.international_rigs?.value !== undefined) {
+            updateDrillingCard(
+              "card-rig-intl",
+              di.rig_counts.international_rigs.value,
+            );
+          }
+        }
+
+        // DUC wells
+        if (di.duc_wells) {
+          if (di.duc_wells.permian?.value !== undefined) {
+            updateDrillingCard("card-duc-permian", di.duc_wells.permian.value);
+          }
+          if (di.duc_wells.eagle_ford?.value !== undefined) {
+            updateDrillingCard(
+              "card-duc-eagleford",
+              di.duc_wells.eagle_ford.value,
+            );
+          }
+          if (di.duc_wells.bakken?.value !== undefined) {
+            updateDrillingCard("card-duc-bakken", di.duc_wells.bakken.value);
+          }
+        }
+
+        // Well permits
+        if (di.well_permits) {
+          updateWellPermits(di.well_permits);
+        }
+      }
+
+      function updateWellPermits(wp) {
+        if (!wp || !showAllMeasures.checked) return;
+
+        // Update summary
+        if (wp.summary) {
+          document.getElementById("permits7d").textContent =
+            wp.summary.total_permits_7d || "--";
+          document.getElementById("permits30d").textContent =
+            wp.summary.total_permits_30d || "--";
+          document.getElementById("permitsStates").textContent =
+            wp.summary.active_states || "--";
+        }
+
+        // Update grid with all states
+        if (wp.by_state) {
+          const grid = document.getElementById("permitsGrid");
+          grid.innerHTML = "";
+
+          // Sort states by 7d count descending
+          const states = Object.entries(wp.by_state)
+            .map(([state, data]) => ({ state, count: data?.count_7d || 0 }))
+            .sort((a, b) => b.count - a.count);
+
+          states.forEach(({ state, count }) => {
+            const div = document.createElement("div");
+            div.className = "permit-state";
+            div.innerHTML = `<span class="state">${state}</span><span class="count">${count}</span>`;
+            grid.appendChild(div);
+          });
+
+          // Show the permits section
+          permitsSection.classList.add("visible");
+        }
       }
 
       function updatePriceDisplay(data) {
@@ -580,6 +809,15 @@
 
             if (msg.type === "welcome") {
               addLog("Server welcomed connection", "info");
+              // Welcome message may include initial data
+              if (msg.data) {
+                if (msg.data.prices) {
+                  updatePriceDisplay(msg.data);
+                }
+                if (msg.data.drilling_intelligence) {
+                  updateDrillingDisplay(msg.data.drilling_intelligence);
+                }
+              }
               return;
             }
 
@@ -604,9 +842,16 @@
             }
 
             if (msg.message) {
+              const msgData = msg.message.data || msg.message;
+
               // Update price cards
-              if (msg.message.prices || msg.message.data?.prices) {
-                updatePriceDisplay(msg.message.data || msg.message);
+              if (msg.message.prices || msgData.prices) {
+                updatePriceDisplay(msgData);
+              }
+
+              // Update drilling intelligence
+              if (msgData.drilling_intelligence) {
+                updateDrillingDisplay(msgData.drilling_intelligence);
               }
 
               // Log the message
