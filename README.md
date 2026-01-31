@@ -62,7 +62,7 @@ node cli/index.js YOUR_API_KEY [options]
 
 Options:
   -l, --local    Use localhost:5000 (development mode)
-  -a, --all      Show all measures including drilling intelligence
+  -a, --all      Show all measures (drilling intelligence, well permits)
   -v, --verbose  Show detailed connection info and raw messages
   -p, --pings    Show ping messages (filtered by default)
   -e, --export   Export log to file on exit
